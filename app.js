@@ -8,6 +8,38 @@ const weeklyPointValue = 5;
 const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const dayNamesLong = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const syncStatus = document.querySelector("#sync-status");
+const completionMessages = [
+  "Nice, one less thing on the list.",
+  "That is another clean little win.",
+  "Progress logged. The flat is winning.",
+  "Small task done, big difference made.",
+  "Clean streak continues.",
+  "Future you gets an easier day.",
+  "That corner of chaos has been handled.",
+  "Another box defeated.",
+  "One step closer to reset mode.",
+  "Clean points secured.",
+  "Household momentum is building.",
+  "That task can stop taking up brain space.",
+  "Ticked, tracked, and done.",
+  "The checklist approves.",
+  "A little more calm added to the flat.",
+  "Done means done.",
+  "That is a tidy little victory.",
+  "One more thing off the mental load.",
+  "The room just got easier to exist in.",
+  "Good reset energy.",
+  "A practical win has landed.",
+  "Task complete. Points collected.",
+  "That is one less thing waiting around.",
+  "The flat is a bit lighter now.",
+  "Cleanliness score goes up.",
+  "The list got shorter.",
+  "That is some solid follow-through.",
+  "Reset progress saved.",
+  "Tiny chore, real impact.",
+  "Done and counted."
+];
 
 let cloudSaveTimer;
 let cloudDataRef;
@@ -105,13 +137,14 @@ document.querySelectorAll("[data-reset]").forEach((button) => {
 
 setupDiscordControls();
 updateScores();
+runMonthEndAutoReset();
 setupCloudSync();
 
 function readSavedState() {
   try {
-    return JSON.parse(localStorage.getItem(storageKey)) || { checked: {}, notes: "" };
+    return JSON.parse(localStorage.getItem(storageKey)) || { checked: {}, notes: "", autoResetKey: "" };
   } catch (error) {
-    return { checked: {}, notes: "" };
+    return { checked: {}, notes: "", autoResetKey: "" };
   }
 }
 
@@ -244,7 +277,7 @@ function renderSavedState() {
   updateScores();
 }
 
-function resetTicks(listType) {
+function resetTicks(listType, options = {}) {
   const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
 
   checkboxes.forEach((checkbox) => {
@@ -254,9 +287,15 @@ function resetTicks(listType) {
     }
   });
 
+  if (options.autoResetKey) {
+    appState.autoResetKey = options.autoResetKey;
+  }
+
   saveState();
   updateScores();
-  sendDiscordUpdate("Checklist reset", `${listTypeLabel(listType)} ticks were reset`);
+  sendDiscordUpdate(options.title || "Checklist reset", options.detail || `${listTypeLabel(listType)} ticks were reset`, {
+    message: "Time to do it all again."
+  });
 }
 
 function listTypeLabel(listType) {
@@ -309,8 +348,10 @@ async function setupCloudSync() {
       const remoteState = snapshot.val();
       appState.checked = remoteState.checked || {};
       appState.notes = remoteState.notes || "";
+      appState.autoResetKey = remoteState.autoResetKey || "";
       saveState({ skipCloud: true });
       renderSavedState();
+      runMonthEndAutoReset();
       updateSyncStatus("Global sync ready", "synced");
     }, (error) => {
       cloudSyncReady = false;
@@ -352,6 +393,7 @@ function scheduleCloudSave() {
       await setCloudData(cloudDataRef, {
         checked: appState.checked,
         notes: appState.notes || "",
+        autoResetKey: appState.autoResetKey || "",
         updatedAt: cloudTimestamp()
       });
       updateSyncStatus("Global sync ready", "synced");
@@ -386,14 +428,14 @@ function updateDiscordStatus(message) {
   discordStatus.dataset.mode = webhookUrl ? "synced" : "local";
 }
 
-async function sendDiscordUpdate(title, detail) {
+async function sendDiscordUpdate(title, detail, options = {}) {
   const webhookUrl = getDiscordWebhookUrl();
 
   if (!webhookUrl) {
     return;
   }
 
-  const payload = makeDiscordPayload(title, detail, false);
+  const payload = makeDiscordPayload(title, detail, false, options);
   const content = payload.content;
 
   try {
@@ -429,17 +471,18 @@ async function saveDiscordWebhook(webhookUrl) {
   updateDiscordStatus(webhookUrl ? "Discord updates are on for this device" : "Discord updates are off");
 }
 
-function makeDiscordPayload(title, detail, includeTimestamp) {
+function makeDiscordPayload(title, detail, includeTimestamp, options = {}) {
   const totalPoints = document.querySelector("#total-points").textContent;
   const completedCount = document.querySelector("#completed-count").textContent;
   const progressText = document.querySelector("#progress-text").textContent;
+  const closingMessage = options.message || getRandomCompletionMessage();
   const content = [
     "**Cleaning progress update**",
     `Done: ${title}`,
     `When: ${detail}`,
     `Score now: ${totalPoints} points`,
     `Progress: ${completedCount} ticks, ${progressText}`,
-    "Nice, one less thing on the list."
+    closingMessage
   ].join("\n");
 
   return {
@@ -450,4 +493,29 @@ function makeDiscordPayload(title, detail, includeTimestamp) {
     content,
     createdAt: includeTimestamp && cloudTimestamp ? cloudTimestamp() : Date.now()
   };
+}
+
+function getRandomCompletionMessage() {
+  const index = Math.floor(Math.random() * completionMessages.length);
+  return completionMessages[index];
+}
+
+function runMonthEndAutoReset() {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const isLastDayOfMonth = tomorrow.getDate() === 1;
+  const autoResetKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+  if (!isLastDayOfMonth || appState.autoResetKey === autoResetKey) {
+    return;
+  }
+
+  resetTicks("all", {
+    autoResetKey,
+    title: "Month-end checklist reset",
+    detail: "The last day of the month auto reset ran",
+    message: "Time to do it all again."
+  });
 }

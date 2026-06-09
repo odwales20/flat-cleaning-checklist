@@ -18,6 +18,10 @@ A plain HTML, CSS, and vanilla JavaScript checklist app for GitHub Pages.
 
 The page shows daily points, weekly points, total points, completed ticks, and progress.
 
+## Monthly Reset
+
+When the site is opened on the last day of the month, it automatically resets all checklist ticks once for that month. The reset marker is saved with the shared Firebase checklist state so it does not keep resetting again and again on the same day.
+
 ## Global Saving Across Devices
 
 GitHub Pages is static hosting, so it cannot store shared state by itself. For global saving across phones, tablets, and computers, this site supports Firebase Realtime Database.
