@@ -1,4 +1,4 @@
-import { checklistDatabasePath, firebaseConfig, firebaseEnabled } from "./firebase-config.js";
+import { checklistDatabasePath, discordEventsDatabasePath, firebaseConfig, firebaseEnabled } from "./firebase-config.js";
 import { discordEnabled, discordWebhookUrl } from "./discord-config.js";
 
 const storageKey = "flat-cleaning-checklist-v1";
@@ -11,7 +11,9 @@ const syncStatus = document.querySelector("#sync-status");
 
 let cloudSaveTimer;
 let cloudDataRef;
+let discordEventsRef;
 let setCloudData;
+let pushCloudData;
 let cloudTimestamp;
 let cloudSyncReady = false;
 
@@ -277,7 +279,9 @@ async function setupCloudSync() {
     const database = firebaseDatabase.getDatabase(firebaseAppInstance);
 
     cloudDataRef = firebaseDatabase.ref(database, checklistDatabasePath);
+    discordEventsRef = firebaseDatabase.ref(database, discordEventsDatabasePath);
     setCloudData = firebaseDatabase.set;
+    pushCloudData = firebaseDatabase.push;
     cloudTimestamp = firebaseDatabase.serverTimestamp;
     cloudSyncReady = true;
 
@@ -361,18 +365,22 @@ function updateDiscordStatus(message) {
 async function sendDiscordUpdate(title, detail) {
   const webhookUrl = getDiscordWebhookUrl();
 
+  if (cloudSyncReady && discordEventsRef && pushCloudData) {
+    try {
+      await pushCloudData(discordEventsRef, makeDiscordPayload(title, detail, true));
+      updateDiscordStatus("Queued for Discord");
+      return;
+    } catch (error) {
+      updateDiscordStatus("Discord queue failed");
+    }
+  }
+
   if (!webhookUrl) {
     return;
   }
 
-  const totalPoints = document.querySelector("#total-points").textContent;
-  const completedCount = document.querySelector("#completed-count").textContent;
-  const content = [
-    `**${title}**`,
-    detail,
-    `Points: ${totalPoints}`,
-    `Ticks: ${completedCount}`
-  ].join("\n");
+  const payload = makeDiscordPayload(title, detail, false);
+  const content = payload.content;
 
   try {
     await fetch(webhookUrl, {
@@ -384,4 +392,24 @@ async function sendDiscordUpdate(title, detail) {
   } catch (error) {
     updateDiscordStatus("Discord update failed");
   }
+}
+
+function makeDiscordPayload(title, detail, includeTimestamp) {
+  const totalPoints = document.querySelector("#total-points").textContent;
+  const completedCount = document.querySelector("#completed-count").textContent;
+  const content = [
+    `**${title}**`,
+    detail,
+    `Points: ${totalPoints}`,
+    `Ticks: ${completedCount}`
+  ].join("\n");
+
+  return {
+    title,
+    detail,
+    totalPoints,
+    completedCount,
+    content,
+    createdAt: includeTimestamp && cloudTimestamp ? cloudTimestamp() : Date.now()
+  };
 }

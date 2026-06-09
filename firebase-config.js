@@ -24,3 +24,6 @@ export const firebaseConfig = {
 
 // Everyone opening the same GitHub Pages site will share this same checklist.
 export const checklistDatabasePath = "checklists/flat-cleaning-checklist";
+
+// Discord events are written here for a Firebase Cloud Function to forward.
+export const discordEventsDatabasePath = "discord-events";

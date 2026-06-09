@@ -40,6 +40,10 @@ Simple open rules for a private/unlisted household link:
         ".read": true,
         ".write": true
       }
+    },
+    "discord-events": {
+      ".read": false,
+      ".write": true
     }
   }
 }
@@ -51,7 +55,48 @@ These rules make the checklist editable by anyone with the link. For a public si
 
 The site can send updates to a Discord webhook when a task is ticked or reset.
 
-For safety, do not put a real Discord webhook URL into a public GitHub Pages repository. Anyone who can view the page source could copy it and post to your Discord channel.
+For safety, do not put a real Discord webhook URL into a public GitHub Pages repository or a public-readable database path. Anyone who can view the page source or read the database could copy it and post to your Discord channel.
+
+The safer global setup is:
+
+1. The website writes Discord event messages to Firebase Realtime Database at `discord-events`.
+2. A Firebase Cloud Function reads those events.
+3. The Cloud Function sends the message to Discord using a server-side `DISCORD_WEBHOOK_URL` secret.
+
+Deploy the function:
+
+```txt
+cd functions
+npm install
+copy .env.example .env
+```
+
+Put the real webhook URL in `functions/.env`, then deploy with Firebase CLI:
+
+```txt
+firebase deploy --only functions
+```
+
+Add this Realtime Database rule so the website can queue Discord events:
+
+```txt
+{
+  "rules": {
+    "checklists": {
+      "flat-cleaning-checklist": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "discord-events": {
+      ".read": false,
+      ".write": true
+    }
+  }
+}
+```
+
+The old browser-only webhook option still exists for testing on one device:
 
 Use the Discord updates panel on the page instead:
 
