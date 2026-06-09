@@ -8,6 +8,7 @@ A plain HTML, CSS, and vanilla JavaScript checklist app for GitHub Pages.
 - `style.css` - screen and A4 print styles
 - `app.js` - checklist rendering, points, reset buttons, saving, and optional cloud sync
 - `firebase-config.js` - Firebase settings for global cross-device saving
+- `discord-config.js` - optional Discord webhook settings
 - `.nojekyll` - tells GitHub Pages to serve the files exactly as they are
 
 ## Points
@@ -45,6 +46,21 @@ Simple open rules for a private/unlisted household link:
 ```
 
 These rules make the checklist editable by anyone with the link. For a public site, use Firebase Authentication and stricter rules.
+
+## Discord Updates
+
+The site can send updates to a Discord webhook when a task is ticked or reset.
+
+For safety, do not put a real Discord webhook URL into a public GitHub Pages repository. Anyone who can view the page source could copy it and post to your Discord channel.
+
+Use the Discord updates panel on the page instead:
+
+1. Open the checklist.
+2. Open `Discord updates`.
+3. Paste the webhook URL.
+4. Press `Save webhook on this device`.
+
+The webhook is saved only in that browser. If you pasted a real webhook into chat or source code, delete it in Discord and create a new one.
 
 ## GitHub Pages
 

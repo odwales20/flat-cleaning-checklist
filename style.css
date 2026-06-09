@@ -190,6 +190,33 @@ button:focus-visible,
   color: var(--ink);
 }
 
+.discord-panel {
+  margin: 16px 0;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.discord-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.webhook-field {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  margin: 12px 0;
+}
+
+.webhook-field input {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
 .section {
   margin-bottom: 34px;
 }
@@ -303,6 +330,10 @@ textarea {
 
   .reset-actions button {
     width: 100%;
+  }
+
+  .webhook-field {
+    grid-template-columns: 1fr;
   }
 
   .week-row {

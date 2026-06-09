@@ -1,6 +1,8 @@
 import { checklistDatabasePath, firebaseConfig, firebaseEnabled } from "./firebase-config.js";
+import { discordEnabled, discordWebhookUrl } from "./discord-config.js";
 
 const storageKey = "flat-cleaning-checklist-v1";
+const discordStorageKey = "flat-cleaning-discord-webhook-v1";
 const dailyPointValue = 1;
 const weeklyPointValue = 5;
 const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -75,6 +77,8 @@ const appState = readSavedState();
 const dailyTaskContainer = document.querySelector("#daily-tasks");
 const weeklyTaskContainer = document.querySelector("#weekly-tasks");
 const notes = document.querySelector("#notes");
+const discordWebhookInput = document.querySelector("#discord-webhook");
+const discordStatus = document.querySelector("#discord-status");
 
 dailyTasks.forEach((task) => {
   dailyTaskContainer.append(makeTaskCard(task, makeDailyGrid(task)));
@@ -94,6 +98,7 @@ document.querySelectorAll("[data-reset]").forEach((button) => {
   button.addEventListener("click", () => resetTicks(button.dataset.reset));
 });
 
+setupDiscordControls();
 updateScores();
 setupCloudSync();
 
@@ -113,7 +118,7 @@ function saveState(options = {}) {
   }
 }
 
-function makeCheckboxLabel(dayName, checkboxId, listType) {
+function makeCheckboxLabel(dayName, checkboxId, listType, task, labelText) {
   const label = document.createElement("label");
   const span = document.createElement("span");
   const checkbox = document.createElement("input");
@@ -127,6 +132,7 @@ function makeCheckboxLabel(dayName, checkboxId, listType) {
   checkbox.addEventListener("change", () => {
     if (checkbox.checked) {
       appState.checked[checkboxId] = true;
+      sendDiscordUpdate(`${task.room} - Step ${task.step}: ${task.name}`, `${listTypeLabel(listType)} ${labelText} ticked`);
     } else {
       delete appState.checked[checkboxId];
     }
@@ -168,7 +174,7 @@ function makeDailyGrid(task) {
     row.append(weekLabel);
     dayNamesShort.forEach((day, dayIndex) => {
       const checkboxId = `daily-${taskKey}-week-${week}-day-${dayIndex + 1}`;
-      row.append(makeCheckboxLabel(day, checkboxId, "daily"));
+          row.append(makeCheckboxLabel(day, checkboxId, "daily", task, `Week ${week} ${day}`));
     });
     grid.append(row);
   }
@@ -184,7 +190,7 @@ function makeWeeklyGrid(task) {
   grid.setAttribute("aria-label", `Weekly checkboxes for ${task.name}`);
   dayNamesLong.forEach((day, dayIndex) => {
     const checkboxId = `weekly-${taskKey}-day-${dayIndex + 1}`;
-    grid.append(makeCheckboxLabel(day, checkboxId, "weekly"));
+    grid.append(makeCheckboxLabel(day, checkboxId, "weekly", task, day));
   });
 
   return grid;
@@ -236,6 +242,19 @@ function resetTicks(listType) {
 
   saveState();
   updateScores();
+  sendDiscordUpdate("Checklist reset", `${listTypeLabel(listType)} ticks were reset`);
+}
+
+function listTypeLabel(listType) {
+  if (listType === "daily") {
+    return "Daily";
+  }
+
+  if (listType === "weekly") {
+    return "Weekly";
+  }
+
+  return "All";
 }
 
 function updateSyncStatus(message, mode = "local") {
@@ -309,4 +328,60 @@ function scheduleCloudSave() {
       updateSyncStatus("Global save failed. Saving on this device.", "local");
     }
   }, 350);
+}
+
+function setupDiscordControls() {
+  const savedWebhook = localStorage.getItem(discordStorageKey) || "";
+
+  discordWebhookInput.value = savedWebhook;
+  updateDiscordStatus();
+
+  document.querySelector("#save-discord-webhook").addEventListener("click", () => {
+    localStorage.setItem(discordStorageKey, discordWebhookInput.value.trim());
+    updateDiscordStatus("Discord updates are on for this device");
+  });
+
+  document.querySelector("#clear-discord-webhook").addEventListener("click", () => {
+    localStorage.removeItem(discordStorageKey);
+    discordWebhookInput.value = "";
+    updateDiscordStatus("Discord updates are off");
+  });
+}
+
+function getDiscordWebhookUrl() {
+  return localStorage.getItem(discordStorageKey) || (discordEnabled ? discordWebhookUrl : "");
+}
+
+function updateDiscordStatus(message) {
+  const webhookUrl = getDiscordWebhookUrl();
+  discordStatus.textContent = message || (webhookUrl ? "Discord updates are on for this device" : "Discord updates are off");
+  discordStatus.dataset.mode = webhookUrl ? "synced" : "local";
+}
+
+async function sendDiscordUpdate(title, detail) {
+  const webhookUrl = getDiscordWebhookUrl();
+
+  if (!webhookUrl) {
+    return;
+  }
+
+  const totalPoints = document.querySelector("#total-points").textContent;
+  const completedCount = document.querySelector("#completed-count").textContent;
+  const content = [
+    `**${title}**`,
+    detail,
+    `Points: ${totalPoints}`,
+    `Ticks: ${completedCount}`
+  ].join("\n");
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+    updateDiscordStatus("Sent to Discord");
+  } catch (error) {
+    updateDiscordStatus("Discord update failed");
+  }
 }

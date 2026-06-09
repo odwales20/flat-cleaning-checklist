@@ -49,6 +49,18 @@
         <p id="progress-text">0% complete</p>
       </div>
       <p class="sync-status" id="sync-status">Saving on this device</p>
+      <details class="discord-panel no-print">
+        <summary>Discord updates</summary>
+        <label class="webhook-field">
+          <span>Webhook URL</span>
+          <input id="discord-webhook" type="password" autocomplete="off" placeholder="Paste a Discord webhook URL">
+        </label>
+        <div class="reset-actions">
+          <button type="button" id="save-discord-webhook">Save webhook on this device</button>
+          <button type="button" id="clear-discord-webhook">Clear webhook</button>
+        </div>
+        <p class="sync-status" id="discord-status">Discord updates are off</p>
+      </details>
       <div class="reset-actions no-print">
         <button type="button" data-reset="daily">Reset daily ticks</button>
         <button type="button" data-reset="weekly">Reset weekly ticks</button>
