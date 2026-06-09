@@ -275,9 +275,13 @@ async function setupCloudSync() {
       saveState({ skipCloud: true });
       renderSavedState();
       updateSyncStatus("Global sync ready", "synced");
-    }, () => {
+    }, (error) => {
       cloudSyncReady = false;
-      updateSyncStatus("Global sync unavailable. Saving on this device.", "local");
+      if (error.code === "PERMISSION_DENIED") {
+        updateSyncStatus("Firebase rules are blocking sync. Saving on this device.", "local");
+      } else {
+        updateSyncStatus("Global sync unavailable. Saving on this device.", "local");
+      }
     });
   } catch (error) {
     cloudSyncReady = false;
