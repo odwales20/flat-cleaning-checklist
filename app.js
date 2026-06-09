@@ -4,6 +4,7 @@ import { discordEnabled, discordWebhookUrl } from "./discord-config.js";
 const storageKey = "flat-cleaning-checklist-v1";
 const discordStorageKey = "flat-cleaning-discord-webhook-v1";
 const adminModeStorageKey = "flat-cleaning-admin-mode-v1";
+const discordRewardPingUserId = "234050166049603586";
 const dailyPointValue = 1;
 const weeklyPointValue = 5;
 const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -170,8 +171,22 @@ function normalizeState(state = {}) {
     checked: state.checked || {},
     notes: state.notes || "",
     autoResetKey: state.autoResetKey || "",
-    rewards: Array.isArray(state.rewards) ? state.rewards : []
+    rewards: normalizeRewards(state.rewards)
   };
+}
+
+function normalizeRewards(rewards = []) {
+  if (!Array.isArray(rewards)) {
+    return [];
+  }
+
+  return rewards.map((reward) => ({
+    id: reward.id || makeRewardId(),
+    name: reward.name || "Unnamed reward",
+    cost: Number.parseInt(reward.cost, 10) || 1,
+    bought: Boolean(reward.bought || reward.redeemed),
+    redeemed: Boolean(reward.redeemed)
+  }));
 }
 
 function saveState(options = {}) {
@@ -385,7 +400,7 @@ async function setupCloudSync() {
       appState.checked = remoteState.checked || {};
       appState.notes = remoteState.notes || "";
       appState.autoResetKey = remoteState.autoResetKey || "";
-      appState.rewards = Array.isArray(remoteState.rewards) ? remoteState.rewards : [];
+      appState.rewards = normalizeRewards(remoteState.rewards);
       saveState({ skipCloud: true });
       renderSavedState();
       runMonthEndAutoReset();
@@ -474,13 +489,20 @@ async function sendDiscordUpdate(title, detail, options = {}) {
   }
 
   const payload = makeDiscordPayload(title, detail, false, options);
-  const content = payload.content;
+  const body = {
+    content: payload.content,
+    embeds: payload.embeds
+  };
+
+  if (payload.allowedMentions) {
+    body.allowed_mentions = payload.allowedMentions;
+  }
 
   try {
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content })
+      body: JSON.stringify(body)
     });
     updateDiscordStatus("Sent to Discord");
   } catch (error) {
@@ -511,24 +533,42 @@ async function saveDiscordWebhook(webhookUrl) {
 
 function makeDiscordPayload(title, detail, includeTimestamp, options = {}) {
   const totalPoints = document.querySelector("#total-points").textContent;
+  const availablePoints = document.querySelector("#available-points").textContent;
   const completedCount = document.querySelector("#completed-count").textContent;
   const progressText = document.querySelector("#progress-text").textContent;
   const closingMessage = options.message || getRandomCompletionMessage();
-  const content = [
-    "**Cleaning progress update**",
-    `Done: ${title}`,
-    `When: ${detail}`,
-    `Score now: ${totalPoints} points`,
-    `Progress: ${completedCount} ticks, ${progressText}`,
-    closingMessage
-  ].join("\n");
+  const embedTitle = options.embedTitle || "Cleaning progress update";
+  const embedColor = options.embedColor || 2251100;
+  const content = options.pingUserId ? `<@${options.pingUserId}>` : "";
+  const fields = [
+    { name: "Done", value: title, inline: false },
+    { name: "When", value: detail, inline: false },
+    { name: "Total points", value: `${totalPoints}`, inline: true },
+    { name: "Available points", value: `${availablePoints}`, inline: true },
+    { name: "Progress", value: `${completedCount} ticks, ${progressText}`, inline: false }
+  ];
+
+  if (options.extraFields) {
+    fields.push(...options.extraFields);
+  }
+
+  const embeds = [{
+    title: embedTitle,
+    description: closingMessage,
+    color: embedColor,
+    fields,
+    timestamp: new Date().toISOString()
+  }];
 
   return {
     title,
     detail,
     totalPoints,
     completedCount,
+    availablePoints,
     content,
+    embeds,
+    allowedMentions: options.pingUserId ? { users: [options.pingUserId] } : undefined,
     createdAt: includeTimestamp && cloudTimestamp ? cloudTimestamp() : Date.now()
   };
 }
@@ -550,6 +590,7 @@ function addReward(name, cost) {
     id: makeRewardId(),
     name: trimmedName,
     cost: parsedCost,
+    bought: false,
     redeemed: false
   });
 
@@ -583,12 +624,35 @@ function toggleRewardRedeemed(rewardId) {
 
 function getRedeemedPoints() {
   return appState.rewards
-    .filter((reward) => reward.redeemed)
+    .filter((reward) => reward.bought)
     .reduce((total, reward) => total + Number(reward.cost || 0), 0);
 }
 
 function getAvailablePoints(totalPoints = Number.parseInt(document.querySelector("#total-points").textContent, 10) || 0) {
   return Math.max(totalPoints - getRedeemedPoints(), 0);
+}
+
+function buyReward(rewardId) {
+  const reward = appState.rewards.find((item) => item.id === rewardId);
+
+  if (!reward || reward.bought || Number(reward.cost) > getAvailablePoints()) {
+    return;
+  }
+
+  reward.bought = true;
+  reward.redeemed = false;
+  saveState();
+  updateScores();
+  sendDiscordUpdate("Reward bought", `${reward.name} was bought from the points shop`, {
+    embedTitle: "Reward bought from the points shop",
+    embedColor: 15844367,
+    message: "A reward has been bought and is ready to redeem.",
+    pingUserId: discordRewardPingUserId,
+    extraFields: [
+      { name: "Reward", value: reward.name, inline: true },
+      { name: "Cost", value: `${reward.cost} points`, inline: true }
+    ]
+  });
 }
 
 function renderRewards() {
@@ -612,26 +676,46 @@ function renderRewards() {
     const item = document.createElement("article");
     const title = document.createElement("h3");
     const meta = document.createElement("p");
-    const controls = document.createElement("div");
+    const buyControls = document.createElement("div");
+    const adminControls = document.createElement("div");
+    const buyButton = document.createElement("button");
     const redeemButton = document.createElement("button");
     const removeButton = document.createElement("button");
 
-    item.className = `reward-item${reward.redeemed ? " reward-redeemed" : ""}`;
+    item.className = `reward-item${reward.bought ? " reward-bought" : ""}${reward.redeemed ? " reward-redeemed" : ""}`;
     title.textContent = reward.name;
-    meta.textContent = `${reward.cost} points${reward.redeemed ? " - redeemed" : ""}`;
-    controls.className = "reward-actions admin-only";
+    meta.textContent = getRewardMetaText(reward);
+    buyControls.className = "reward-actions";
+    adminControls.className = "reward-actions admin-only";
+    buyButton.type = "button";
+    buyButton.textContent = reward.bought ? "Bought" : "Buy reward";
+    buyButton.disabled = reward.bought || Number(reward.cost) > availablePoints;
+    buyButton.addEventListener("click", () => buyReward(reward.id));
     redeemButton.type = "button";
     redeemButton.textContent = reward.redeemed ? "Mark not redeemed" : "Mark redeemed";
-    redeemButton.disabled = !reward.redeemed && Number(reward.cost) > availablePoints;
+    redeemButton.disabled = !reward.bought;
     redeemButton.addEventListener("click", () => toggleRewardRedeemed(reward.id));
     removeButton.type = "button";
     removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => removeReward(reward.id));
 
-    controls.append(redeemButton, removeButton);
-    item.append(title, meta, controls);
+    buyControls.append(buyButton);
+    adminControls.append(redeemButton, removeButton);
+    item.append(title, meta, buyControls, adminControls);
     rewardList.append(item);
   });
+}
+
+function getRewardMetaText(reward) {
+  if (reward.redeemed) {
+    return `${reward.cost} points - bought and redeemed`;
+  }
+
+  if (reward.bought) {
+    return `${reward.cost} points - bought, waiting to redeem`;
+  }
+
+  return `${reward.cost} points`;
 }
 
 function runMonthEndAutoReset() {

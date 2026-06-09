@@ -20,7 +20,9 @@ The page shows daily points, weekly points, total points, completed ticks, and p
 
 ## Points Shop
 
-The points shop lets you add rewards with a point cost, remove rewards, and mark rewards as redeemed or not redeemed. Redeemed reward costs are subtracted from available points. Rewards are saved in the shared Firebase checklist state, so all devices see the same shop.
+The points shop lets you add rewards with a point cost, buy rewards, remove rewards, and mark bought rewards as redeemed or not redeemed. Bought reward costs are subtracted from available points. Rewards are saved in the shared Firebase checklist state, so all devices see the same shop.
+
+Buying a reward sends a Discord embed and pings the configured Discord user.
 
 Admin controls are hidden by default. Click the `F` in `Flat Cleaning Checklist` to show or hide reset buttons, reward add/remove controls, and redeemed controls on that device.
 

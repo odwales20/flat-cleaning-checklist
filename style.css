@@ -308,9 +308,13 @@ button:focus-visible,
   margin-bottom: 0;
 }
 
-.reward-redeemed {
+.reward-bought {
   border-color: var(--accent);
   background: var(--soft);
+}
+
+.reward-redeemed {
+  border-style: double;
 }
 
 .reward-actions {
