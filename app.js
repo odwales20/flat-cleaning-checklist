@@ -1,4 +1,4 @@
-import { checklistDatabasePath, discordEventsDatabasePath, firebaseConfig, firebaseEnabled } from "./firebase-config.js";
+import { checklistDatabasePath, discordEventsDatabasePath, discordSettingsDatabasePath, firebaseConfig, firebaseEnabled } from "./firebase-config.js";
 import { discordEnabled, discordWebhookUrl } from "./discord-config.js";
 
 const storageKey = "flat-cleaning-checklist-v1";
@@ -12,10 +12,13 @@ const syncStatus = document.querySelector("#sync-status");
 let cloudSaveTimer;
 let cloudDataRef;
 let discordEventsRef;
+let discordSettingsRef;
 let setCloudData;
+let updateCloudData;
 let pushCloudData;
 let cloudTimestamp;
 let cloudSyncReady = false;
+let sharedDiscordWebhookUrl = "";
 
 /*
   Add or remove daily tasks here.
@@ -280,7 +283,9 @@ async function setupCloudSync() {
 
     cloudDataRef = firebaseDatabase.ref(database, checklistDatabasePath);
     discordEventsRef = firebaseDatabase.ref(database, discordEventsDatabasePath);
+    discordSettingsRef = firebaseDatabase.ref(database, discordSettingsDatabasePath);
     setCloudData = firebaseDatabase.set;
+    updateCloudData = firebaseDatabase.update;
     pushCloudData = firebaseDatabase.push;
     cloudTimestamp = firebaseDatabase.serverTimestamp;
     cloudSyncReady = true;
@@ -305,6 +310,19 @@ async function setupCloudSync() {
       } else {
         updateSyncStatus("Global sync unavailable. Saving on this device.", "local");
       }
+    });
+
+    firebaseDatabase.onValue(discordSettingsRef, (snapshot) => {
+      const settings = snapshot.val() || {};
+      sharedDiscordWebhookUrl = settings.webhookUrl || "";
+
+      if (sharedDiscordWebhookUrl && !discordWebhookInput.value) {
+        discordWebhookInput.value = sharedDiscordWebhookUrl;
+      }
+
+      updateDiscordStatus();
+    }, () => {
+      updateDiscordStatus("Discord settings could not sync");
     });
   } catch (error) {
     cloudSyncReady = false;
@@ -341,19 +359,16 @@ function setupDiscordControls() {
   updateDiscordStatus();
 
   document.querySelector("#save-discord-webhook").addEventListener("click", () => {
-    localStorage.setItem(discordStorageKey, discordWebhookInput.value.trim());
-    updateDiscordStatus("Discord updates are on for this device");
+    saveDiscordWebhook(discordWebhookInput.value.trim());
   });
 
   document.querySelector("#clear-discord-webhook").addEventListener("click", () => {
-    localStorage.removeItem(discordStorageKey);
-    discordWebhookInput.value = "";
-    updateDiscordStatus("Discord updates are off");
+    saveDiscordWebhook("");
   });
 }
 
 function getDiscordWebhookUrl() {
-  return localStorage.getItem(discordStorageKey) || (discordEnabled ? discordWebhookUrl : "");
+  return sharedDiscordWebhookUrl || localStorage.getItem(discordStorageKey) || (discordEnabled ? discordWebhookUrl : "");
 }
 
 function updateDiscordStatus(message) {
@@ -364,16 +379,6 @@ function updateDiscordStatus(message) {
 
 async function sendDiscordUpdate(title, detail) {
   const webhookUrl = getDiscordWebhookUrl();
-
-  if (cloudSyncReady && discordEventsRef && pushCloudData) {
-    try {
-      await pushCloudData(discordEventsRef, makeDiscordPayload(title, detail, true));
-      updateDiscordStatus("Queued for Discord");
-      return;
-    } catch (error) {
-      updateDiscordStatus("Discord queue failed");
-    }
-  }
 
   if (!webhookUrl) {
     return;
@@ -392,6 +397,27 @@ async function sendDiscordUpdate(title, detail) {
   } catch (error) {
     updateDiscordStatus("Discord update failed");
   }
+}
+
+async function saveDiscordWebhook(webhookUrl) {
+  localStorage.setItem(discordStorageKey, webhookUrl);
+  sharedDiscordWebhookUrl = webhookUrl;
+  discordWebhookInput.value = webhookUrl;
+
+  if (cloudSyncReady && discordSettingsRef && updateCloudData) {
+    try {
+      await updateCloudData(discordSettingsRef, {
+        webhookUrl,
+        updatedAt: cloudTimestamp ? cloudTimestamp() : Date.now()
+      });
+      updateDiscordStatus(webhookUrl ? "Discord webhook saved to Firebase" : "Discord webhook cleared from Firebase");
+      return;
+    } catch (error) {
+      updateDiscordStatus("Could not save Discord webhook to Firebase");
+    }
+  }
+
+  updateDiscordStatus(webhookUrl ? "Discord updates are on for this device" : "Discord updates are off");
 }
 
 function makeDiscordPayload(title, detail, includeTimestamp) {

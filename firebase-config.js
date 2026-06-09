@@ -27,3 +27,6 @@ export const checklistDatabasePath = "checklists/flat-cleaning-checklist";
 
 // Discord events are written here for a Firebase Cloud Function to forward.
 export const discordEventsDatabasePath = "discord-events";
+
+// Optional shared Discord webhook setting. This is readable by the website.
+export const discordSettingsDatabasePath = "discord-settings";

@@ -41,6 +41,10 @@ Simple open rules for a private/unlisted household link:
         ".write": true
       }
     },
+    "discord-settings": {
+      ".read": true,
+      ".write": true
+    },
     "discord-events": {
       ".read": false,
       ".write": true
@@ -56,6 +60,8 @@ These rules make the checklist editable by anyone with the link. For a public si
 The site can send updates to a Discord webhook when a task is ticked or reset.
 
 For safety, do not put a real Discord webhook URL into a public GitHub Pages repository or a public-readable database path. Anyone who can view the page source or read the database could copy it and post to your Discord channel.
+
+The site can store the webhook in Firebase Realtime Database at `discord-settings/webhookUrl` so every device uses the same webhook. To enable that, open the checklist, expand `Discord updates`, paste the webhook URL, and press `Save webhook to Firebase`.
 
 The safer global setup is:
 
@@ -87,6 +93,10 @@ Add this Realtime Database rule so the website can queue Discord events:
         ".read": true,
         ".write": true
       }
+    },
+    "discord-settings": {
+      ".read": true,
+      ".write": true
     },
     "discord-events": {
       ".read": false,
