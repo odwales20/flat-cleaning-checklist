@@ -19,25 +19,26 @@ The page shows daily points, weekly points, total points, completed ticks, and p
 
 ## Global Saving Across Devices
 
-GitHub Pages is static hosting, so it cannot store shared state by itself. For global saving across phones, tablets, and computers, this site supports Firebase Firestore.
+GitHub Pages is static hosting, so it cannot store shared state by itself. For global saving across phones, tablets, and computers, this site supports Firebase Realtime Database.
 
 1. Go to <https://console.firebase.google.com/>.
 2. Create a project.
 3. Add a web app.
 4. Copy the Firebase config into `firebase-config.js`.
 5. Set `firebaseEnabled` to `true`.
-6. Create a Firestore database.
-7. Use Firestore rules that allow the checklist document to be read and written by the people who should use it.
+6. Create a Realtime Database.
+7. Use Realtime Database rules that allow the checklist path to be read and written by the people who should use it.
 
 Simple open rules for a private/unlisted household link:
 
 ```txt
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /checklists/flat-cleaning-checklist {
-      allow read, write: if true;
+{
+  "rules": {
+    "checklists": {
+      "flat-cleaning-checklist": {
+        ".read": true,
+        ".write": true
+      }
     }
   }
 }

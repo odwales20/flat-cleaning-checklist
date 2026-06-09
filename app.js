@@ -1,4 +1,4 @@
-import { checklistDocumentPath, firebaseConfig, firebaseEnabled } from "./firebase-config.js";
+import { checklistDatabasePath, firebaseConfig, firebaseEnabled } from "./firebase-config.js";
 
 const storageKey = "flat-cleaning-checklist-v1";
 const dailyPointValue = 1;
@@ -8,8 +8,8 @@ const dayNamesLong = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "S
 const syncStatus = document.querySelector("#sync-status");
 
 let cloudSaveTimer;
-let cloudDocRef;
-let setCloudDoc;
+let cloudDataRef;
+let setCloudData;
 let cloudTimestamp;
 let cloudSyncReady = false;
 
@@ -253,23 +253,23 @@ async function setupCloudSync() {
 
   try {
     const firebaseApp = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
-    const firestore = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+    const firebaseDatabase = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
     const firebaseAppInstance = firebaseApp.initializeApp(firebaseConfig);
-    const database = firestore.getFirestore(firebaseAppInstance);
+    const database = firebaseDatabase.getDatabase(firebaseAppInstance);
 
-    cloudDocRef = firestore.doc(database, checklistDocumentPath);
-    setCloudDoc = firestore.setDoc;
-    cloudTimestamp = firestore.serverTimestamp;
+    cloudDataRef = firebaseDatabase.ref(database, checklistDatabasePath);
+    setCloudData = firebaseDatabase.set;
+    cloudTimestamp = firebaseDatabase.serverTimestamp;
     cloudSyncReady = true;
 
-    firestore.onSnapshot(cloudDocRef, (snapshot) => {
+    firebaseDatabase.onValue(cloudDataRef, (snapshot) => {
       if (!snapshot.exists()) {
         scheduleCloudSave();
         updateSyncStatus("Global sync ready", "synced");
         return;
       }
 
-      const remoteState = snapshot.data();
+      const remoteState = snapshot.val();
       appState.checked = remoteState.checked || {};
       appState.notes = remoteState.notes || "";
       saveState({ skipCloud: true });
@@ -286,7 +286,7 @@ async function setupCloudSync() {
 }
 
 function scheduleCloudSave() {
-  if (!cloudSyncReady || !cloudDocRef || !setCloudDoc) {
+  if (!cloudSyncReady || !cloudDataRef || !setCloudData) {
     return;
   }
 
@@ -295,11 +295,11 @@ function scheduleCloudSave() {
     updateSyncStatus("Saving globally...", "pending");
 
     try {
-      await setCloudDoc(cloudDocRef, {
+      await setCloudData(cloudDataRef, {
         checked: appState.checked,
         notes: appState.notes || "",
         updatedAt: cloudTimestamp()
-      }, { merge: true });
+      });
       updateSyncStatus("Global sync ready", "synced");
     } catch (error) {
       updateSyncStatus("Global save failed. Saving on this device.", "local");
