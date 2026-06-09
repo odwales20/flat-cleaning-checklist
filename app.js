@@ -135,15 +135,24 @@ function makeCheckboxLabel(dayName, checkboxId, listType, task, labelText) {
   checkbox.checked = Boolean(appState.checked[checkboxId]);
 
   checkbox.addEventListener("change", () => {
+    let discordUpdate = null;
+
     if (checkbox.checked) {
       appState.checked[checkboxId] = true;
-      sendDiscordUpdate(`${task.room} - Step ${task.step}: ${task.name}`, `${listTypeLabel(listType)} ${labelText} ticked`);
+      discordUpdate = {
+        title: `${task.room} - Step ${task.step}: ${task.name}`,
+        detail: `${listTypeLabel(listType)} ${labelText} ticked`
+      };
     } else {
       delete appState.checked[checkboxId];
     }
 
     saveState();
     updateScores();
+
+    if (discordUpdate) {
+      sendDiscordUpdate(discordUpdate.title, discordUpdate.detail);
+    }
   });
 
   label.append(span, checkbox);
@@ -423,11 +432,14 @@ async function saveDiscordWebhook(webhookUrl) {
 function makeDiscordPayload(title, detail, includeTimestamp) {
   const totalPoints = document.querySelector("#total-points").textContent;
   const completedCount = document.querySelector("#completed-count").textContent;
+  const progressText = document.querySelector("#progress-text").textContent;
   const content = [
-    `**${title}**`,
-    detail,
-    `Points: ${totalPoints}`,
-    `Ticks: ${completedCount}`
+    "**Cleaning progress update**",
+    `Done: ${title}`,
+    `When: ${detail}`,
+    `Score now: ${totalPoints} points`,
+    `Progress: ${completedCount} ticks, ${progressText}`,
+    "Nice, one less thing on the list."
   ].join("\n");
 
   return {
