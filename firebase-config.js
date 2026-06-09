@@ -10,13 +10,13 @@
   This file is safe to publish to GitHub Pages. Firebase web config is public
   by design; protect the database with Realtime Database rules.
 */
-export const firebaseEnabled = false;
+export const firebaseEnabled = true;
 
 export const firebaseConfig = {
   apiKey: "",
-  authDomain: "",
-  databaseURL: "",
-  projectId: "",
+  authDomain: "cleaning-checklist-f5663.firebaseapp.com",
+  databaseURL: "https://cleaning-checklist-f5663-default-rtdb.firebaseio.com/",
+  projectId: "cleaning-checklist-f5663",
   storageBucket: "",
   messagingSenderId: "",
   appId: ""
