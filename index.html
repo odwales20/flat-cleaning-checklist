@@ -37,6 +37,10 @@
           <span class="score-label">Total points</span>
           <strong id="total-points">0</strong>
         </div>
+        <div class="score-card score-card-total">
+          <span class="score-label">Available points</span>
+          <strong id="available-points">0</strong>
+        </div>
         <div class="score-card">
           <span class="score-label">Tasks ticked</span>
           <strong id="completed-count">0 / 0</strong>
@@ -66,6 +70,29 @@
         <button type="button" data-reset="weekly">Reset weekly ticks</button>
         <button type="button" data-reset="all">Reset all ticks</button>
       </div>
+    </section>
+
+    <section class="shop-panel no-print" aria-labelledby="shop-title">
+      <div class="section-heading">
+        <h2 id="shop-title">Points Shop</h2>
+        <p>Add rewards, set costs, and mark rewards as redeemed.</p>
+      </div>
+      <form class="shop-form" id="reward-form">
+        <label>
+          <span>Reward</span>
+          <input id="reward-name" type="text" autocomplete="off" placeholder="Example: takeaway night" required>
+        </label>
+        <label>
+          <span>Cost</span>
+          <input id="reward-cost" type="number" min="1" step="1" placeholder="Points" required>
+        </label>
+        <button type="submit">Add reward</button>
+      </form>
+      <div class="shop-summary">
+        <p><strong id="spent-points">0</strong> points redeemed</p>
+        <p><strong id="reward-count">0</strong> rewards in shop</p>
+      </div>
+      <div class="reward-list" id="reward-list" aria-live="polite"></div>
     </section>
 
     <section class="section">

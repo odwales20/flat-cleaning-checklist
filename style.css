@@ -203,6 +203,93 @@ button:focus-visible,
   font-weight: 700;
 }
 
+.shop-panel {
+  margin-bottom: 34px;
+}
+
+.shop-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 150px auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.shop-form label,
+.reward-item {
+  display: grid;
+  gap: 8px;
+}
+
+.shop-form label {
+  min-height: auto;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.shop-form input {
+  min-height: 48px;
+  padding: 10px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.shop-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.shop-summary p {
+  margin-bottom: 0;
+}
+
+.reward-list {
+  display: grid;
+  gap: 12px;
+}
+
+.reward-item {
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.reward-item h3,
+.reward-item p {
+  margin-bottom: 0;
+}
+
+.reward-redeemed {
+  border-color: var(--accent);
+  background: var(--soft);
+}
+
+.reward-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.reward-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.empty-shop {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .webhook-field {
   display: grid;
   grid-template-columns: 150px 1fr;
@@ -330,6 +417,10 @@ textarea {
 
   .reset-actions button {
     width: 100%;
+  }
+
+  .shop-form {
+    grid-template-columns: 1fr;
   }
 
   .webhook-field {

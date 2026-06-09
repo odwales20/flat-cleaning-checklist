@@ -116,6 +116,10 @@ const weeklyTaskContainer = document.querySelector("#weekly-tasks");
 const notes = document.querySelector("#notes");
 const discordWebhookInput = document.querySelector("#discord-webhook");
 const discordStatus = document.querySelector("#discord-status");
+const rewardForm = document.querySelector("#reward-form");
+const rewardNameInput = document.querySelector("#reward-name");
+const rewardCostInput = document.querySelector("#reward-cost");
+const rewardList = document.querySelector("#reward-list");
 
 dailyTasks.forEach((task) => {
   dailyTaskContainer.append(makeTaskCard(task, makeDailyGrid(task)));
@@ -135,17 +139,32 @@ document.querySelectorAll("[data-reset]").forEach((button) => {
   button.addEventListener("click", () => resetTicks(button.dataset.reset));
 });
 
+rewardForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addReward(rewardNameInput.value, rewardCostInput.value);
+});
+
 setupDiscordControls();
 updateScores();
+renderRewards();
 runMonthEndAutoReset();
 setupCloudSync();
 
 function readSavedState() {
   try {
-    return JSON.parse(localStorage.getItem(storageKey)) || { checked: {}, notes: "", autoResetKey: "" };
+    return normalizeState(JSON.parse(localStorage.getItem(storageKey)));
   } catch (error) {
-    return { checked: {}, notes: "", autoResetKey: "" };
+    return normalizeState();
   }
+}
+
+function normalizeState(state = {}) {
+  return {
+    checked: state.checked || {},
+    notes: state.notes || "",
+    autoResetKey: state.autoResetKey || "",
+    rewards: Array.isArray(state.rewards) ? state.rewards : []
+  };
 }
 
 function saveState(options = {}) {
@@ -263,9 +282,11 @@ function updateScores() {
   document.querySelector("#daily-points").textContent = dailyPoints;
   document.querySelector("#weekly-points").textContent = weeklyPoints;
   document.querySelector("#total-points").textContent = dailyPoints + weeklyPoints;
+  document.querySelector("#available-points").textContent = getAvailablePoints(dailyPoints + weeklyPoints);
   document.querySelector("#completed-count").textContent = `${completed} / ${total}`;
   document.querySelector("#progress-fill").style.width = `${progress}%`;
   document.querySelector("#progress-text").textContent = `${progress}% complete`;
+  renderRewards();
 }
 
 function renderSavedState() {
@@ -275,6 +296,7 @@ function renderSavedState() {
 
   notes.value = appState.notes || "";
   updateScores();
+  renderRewards();
 }
 
 function resetTicks(listType, options = {}) {
@@ -349,6 +371,7 @@ async function setupCloudSync() {
       appState.checked = remoteState.checked || {};
       appState.notes = remoteState.notes || "";
       appState.autoResetKey = remoteState.autoResetKey || "";
+      appState.rewards = Array.isArray(remoteState.rewards) ? remoteState.rewards : [];
       saveState({ skipCloud: true });
       renderSavedState();
       runMonthEndAutoReset();
@@ -394,6 +417,7 @@ function scheduleCloudSave() {
         checked: appState.checked,
         notes: appState.notes || "",
         autoResetKey: appState.autoResetKey || "",
+        rewards: appState.rewards || [],
         updatedAt: cloudTimestamp()
       });
       updateSyncStatus("Global sync ready", "synced");
@@ -498,6 +522,102 @@ function makeDiscordPayload(title, detail, includeTimestamp, options = {}) {
 function getRandomCompletionMessage() {
   const index = Math.floor(Math.random() * completionMessages.length);
   return completionMessages[index];
+}
+
+function addReward(name, cost) {
+  const trimmedName = name.trim();
+  const parsedCost = Number.parseInt(cost, 10);
+
+  if (!trimmedName || !Number.isFinite(parsedCost) || parsedCost < 1) {
+    return;
+  }
+
+  appState.rewards.push({
+    id: makeRewardId(),
+    name: trimmedName,
+    cost: parsedCost,
+    redeemed: false
+  });
+
+  rewardNameInput.value = "";
+  rewardCostInput.value = "";
+  saveState();
+  updateScores();
+}
+
+function makeRewardId() {
+  return `reward-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function removeReward(rewardId) {
+  appState.rewards = appState.rewards.filter((reward) => reward.id !== rewardId);
+  saveState();
+  updateScores();
+}
+
+function toggleRewardRedeemed(rewardId) {
+  const reward = appState.rewards.find((item) => item.id === rewardId);
+
+  if (!reward) {
+    return;
+  }
+
+  reward.redeemed = !reward.redeemed;
+  saveState();
+  updateScores();
+}
+
+function getRedeemedPoints() {
+  return appState.rewards
+    .filter((reward) => reward.redeemed)
+    .reduce((total, reward) => total + Number(reward.cost || 0), 0);
+}
+
+function getAvailablePoints(totalPoints = Number.parseInt(document.querySelector("#total-points").textContent, 10) || 0) {
+  return Math.max(totalPoints - getRedeemedPoints(), 0);
+}
+
+function renderRewards() {
+  const rewards = appState.rewards || [];
+  const availablePoints = getAvailablePoints();
+  const redeemedPoints = getRedeemedPoints();
+
+  document.querySelector("#spent-points").textContent = redeemedPoints;
+  document.querySelector("#reward-count").textContent = rewards.length;
+  rewardList.replaceChildren();
+
+  if (rewards.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-shop";
+    empty.textContent = "No rewards yet. Add something worth working toward.";
+    rewardList.append(empty);
+    return;
+  }
+
+  rewards.forEach((reward) => {
+    const item = document.createElement("article");
+    const title = document.createElement("h3");
+    const meta = document.createElement("p");
+    const controls = document.createElement("div");
+    const redeemButton = document.createElement("button");
+    const removeButton = document.createElement("button");
+
+    item.className = `reward-item${reward.redeemed ? " reward-redeemed" : ""}`;
+    title.textContent = reward.name;
+    meta.textContent = `${reward.cost} points${reward.redeemed ? " - redeemed" : ""}`;
+    controls.className = "reward-actions";
+    redeemButton.type = "button";
+    redeemButton.textContent = reward.redeemed ? "Mark not redeemed" : "Mark redeemed";
+    redeemButton.disabled = !reward.redeemed && Number(reward.cost) > availablePoints;
+    redeemButton.addEventListener("click", () => toggleRewardRedeemed(reward.id));
+    removeButton.type = "button";
+    removeButton.textContent = "Remove";
+    removeButton.addEventListener("click", () => removeReward(reward.id));
+
+    controls.append(redeemButton, removeButton);
+    item.append(title, meta, controls);
+    rewardList.append(item);
+  });
 }
 
 function runMonthEndAutoReset() {
