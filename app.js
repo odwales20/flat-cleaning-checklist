@@ -3,6 +3,7 @@ import { discordEnabled, discordWebhookUrl } from "./discord-config.js";
 
 const storageKey = "flat-cleaning-checklist-v1";
 const discordStorageKey = "flat-cleaning-discord-webhook-v1";
+const adminModeStorageKey = "flat-cleaning-admin-mode-v1";
 const dailyPointValue = 1;
 const weeklyPointValue = 5;
 const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -116,6 +117,7 @@ const weeklyTaskContainer = document.querySelector("#weekly-tasks");
 const notes = document.querySelector("#notes");
 const discordWebhookInput = document.querySelector("#discord-webhook");
 const discordStatus = document.querySelector("#discord-status");
+const adminToggle = document.querySelector("#admin-toggle");
 const rewardForm = document.querySelector("#reward-form");
 const rewardNameInput = document.querySelector("#reward-name");
 const rewardCostInput = document.querySelector("#reward-cost");
@@ -139,12 +141,17 @@ document.querySelectorAll("[data-reset]").forEach((button) => {
   button.addEventListener("click", () => resetTicks(button.dataset.reset));
 });
 
+adminToggle.addEventListener("click", () => {
+  setAdminMode(!document.body.classList.contains("admin-mode"));
+});
+
 rewardForm.addEventListener("submit", (event) => {
   event.preventDefault();
   addReward(rewardNameInput.value, rewardCostInput.value);
 });
 
 setupDiscordControls();
+setAdminMode(localStorage.getItem(adminModeStorageKey) === "true");
 updateScores();
 renderRewards();
 runMonthEndAutoReset();
@@ -335,6 +342,13 @@ function listTypeLabel(listType) {
 function updateSyncStatus(message, mode = "local") {
   syncStatus.textContent = message;
   syncStatus.dataset.mode = mode;
+}
+
+function setAdminMode(isEnabled) {
+  document.body.classList.toggle("admin-mode", isEnabled);
+  adminToggle.setAttribute("aria-pressed", String(isEnabled));
+  adminToggle.title = isEnabled ? "Admin controls on" : "Admin controls off";
+  localStorage.setItem(adminModeStorageKey, String(isEnabled));
 }
 
 async function setupCloudSync() {
@@ -605,7 +619,7 @@ function renderRewards() {
     item.className = `reward-item${reward.redeemed ? " reward-redeemed" : ""}`;
     title.textContent = reward.name;
     meta.textContent = `${reward.cost} points${reward.redeemed ? " - redeemed" : ""}`;
-    controls.className = "reward-actions";
+    controls.className = "reward-actions admin-only";
     redeemButton.type = "button";
     redeemButton.textContent = reward.redeemed ? "Mark not redeemed" : "Mark redeemed";
     redeemButton.disabled = !reward.redeemed && Number(reward.cost) > availablePoints;

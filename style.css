@@ -59,6 +59,46 @@ h1 {
   line-height: 1.12;
 }
 
+.admin-toggle {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.admin-toggle:hover,
+.admin-toggle:focus-visible,
+.admin-mode .admin-toggle {
+  color: var(--accent);
+}
+
+.admin-toggle:focus-visible {
+  outline: 3px solid #98c8bd;
+  outline-offset: 3px;
+}
+
+.admin-only {
+  display: none !important;
+}
+
+.admin-mode .admin-only {
+  display: flex !important;
+}
+
+.admin-mode .shop-form.admin-only,
+.admin-mode .reward-actions.admin-only {
+  display: grid !important;
+}
+
+.admin-mode .reward-actions.admin-only {
+  display: flex !important;
+}
+
 h2 {
   margin-bottom: 6px;
   font-size: 1.35rem;
@@ -485,6 +525,10 @@ textarea {
 
   h1 {
     font-size: 22pt;
+  }
+
+  .admin-toggle {
+    color: black;
   }
 
   h2 {

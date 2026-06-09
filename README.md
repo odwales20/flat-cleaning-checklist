@@ -22,6 +22,8 @@ The page shows daily points, weekly points, total points, completed ticks, and p
 
 The points shop lets you add rewards with a point cost, remove rewards, and mark rewards as redeemed or not redeemed. Redeemed reward costs are subtracted from available points. Rewards are saved in the shared Firebase checklist state, so all devices see the same shop.
 
+Admin controls are hidden by default. Click the `F` in `Flat Cleaning Checklist` to show or hide reset buttons, reward add/remove controls, and redeemed controls on that device.
+
 ## Monthly Reset
 
 When the site is opened on the last day of the month, it automatically resets all checklist ticks once for that month. The reset marker is saved with the shared Firebase checklist state so it does not keep resetting again and again on the same day.

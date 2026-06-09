@@ -11,7 +11,7 @@
     <header class="site-header">
       <div>
         <p class="eyebrow">Household checklist</p>
-        <h1>Flat Cleaning Checklist</h1>
+        <h1><button class="admin-toggle" id="admin-toggle" type="button" aria-label="Toggle admin controls" title="Toggle admin controls">F</button>lat Cleaning Checklist</h1>
       </div>
       <div class="header-actions">
         <button class="print-button" type="button" onclick="window.print()">Print checklist</button>
@@ -65,7 +65,7 @@
         </div>
         <p class="sync-status" id="discord-status">Discord updates are off</p>
       </details>
-      <div class="reset-actions no-print">
+      <div class="reset-actions admin-only no-print">
         <button type="button" data-reset="daily">Reset daily ticks</button>
         <button type="button" data-reset="weekly">Reset weekly ticks</button>
         <button type="button" data-reset="all">Reset all ticks</button>
@@ -77,7 +77,7 @@
         <h2 id="shop-title">Points Shop</h2>
         <p>Add rewards, set costs, and mark rewards as redeemed.</p>
       </div>
-      <form class="shop-form" id="reward-form">
+      <form class="shop-form admin-only" id="reward-form">
         <label>
           <span>Reward</span>
           <input id="reward-name" type="text" autocomplete="off" placeholder="Example: takeaway night" required>
