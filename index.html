@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flat Cleaning Checklist</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Household checklist</p>
+        <h1>Flat Cleaning Checklist</h1>
+      </div>
+      <div class="header-actions">
+        <button class="print-button" type="button" onclick="window.print()">Print checklist</button>
+      </div>
+    </header>
+
+    <section class="points-panel" aria-labelledby="points-title">
+      <div>
+        <p class="eyebrow">Progress and points</p>
+        <h2 id="points-title">Points System</h2>
+        <p class="points-rule">Daily ticks are worth 1 point. Weekly ticks are worth 5 points.</p>
+      </div>
+      <div class="score-grid" aria-live="polite">
+        <div class="score-card">
+          <span class="score-label">Daily points</span>
+          <strong id="daily-points">0</strong>
+        </div>
+        <div class="score-card">
+          <span class="score-label">Weekly points</span>
+          <strong id="weekly-points">0</strong>
+        </div>
+        <div class="score-card score-card-total">
+          <span class="score-label">Total points</span>
+          <strong id="total-points">0</strong>
+        </div>
+        <div class="score-card">
+          <span class="score-label">Tasks ticked</span>
+          <strong id="completed-count">0 / 0</strong>
+        </div>
+      </div>
+      <div class="progress-wrap" aria-label="Checklist progress">
+        <div class="progress-bar">
+          <span id="progress-fill"></span>
+        </div>
+        <p id="progress-text">0% complete</p>
+      </div>
+      <p class="sync-status" id="sync-status">Saving on this device</p>
+      <div class="reset-actions no-print">
+        <button type="button" data-reset="daily">Reset daily ticks</button>
+        <button type="button" data-reset="weekly">Reset weekly ticks</button>
+        <button type="button" data-reset="all">Reset all ticks</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Daily Checklist</h2>
+        <p>Tick each task once per day. Each task has 4 weeks of boxes.</p>
+      </div>
+      <div id="daily-tasks"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Weekly Checklist</h2>
+        <p>Choose a day and tick the task when it is done.</p>
+      </div>
+      <div id="weekly-tasks"></div>
+    </section>
+
+    <section class="notes">
+      <h2>Notes / Changes for next week</h2>
+      <textarea id="notes" aria-label="Notes and changes for next week" rows="6" placeholder="Write anything to change next week..."></textarea>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
